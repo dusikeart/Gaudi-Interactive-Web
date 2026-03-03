@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antoni Gaudí - 100. výročie</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Castoro+Titling&family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- KONFIGURÁCIA (PREMENNÉ) --- */
+        :root {
+            --color-bg: #fcfcfc;
+            --color-text: #1a1a1a;
+            --color-accent: #020c2b; /* Tmavomodrá */
+            --color-white: #ffffff;
+            
+            --font-title: 'Castoro Titling', serif;
+            --font-body: 'Roboto Flex', sans-serif;
+            
+            /* VRSTVY (Z-INDEX MANAŽMENT) */
+            --z-watermark: 0;
+            --z-noise: 1;
+            --z-shards: 2;
+            --z-ui: 3;
+            --z-info-box: 10;
+            --z-btn-readmore: 20;
+            --z-backdrop: 140;
+            --z-zoomed-img: 150;
+            --z-modal: 200;
+            
+            /* ANIMÁCIE */
+            --transition-speed: 0.4s;
+            --zoom-speed: 0.8s;
+        }
+
+        /* --- ZÁKLADNÝ RESET --- */
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: var(--color-white);
+            font-family: var(--font-body); color: var(--color-text);
+        }
+
+        /* --- HEADER --- */
+        header { 
+            position: absolute; top: 30px; width: 100%; text-align: center; 
+            z-index: 100; pointer-events: none; 
+        }
+        header h1 { 
+            font-family: var(--font-title); font-weight: 400; text-transform: uppercase; 
+            letter-spacing: 3px; font-size: 2rem; color: #000; margin: 0;
+        }
+
+        /* --- INTRO SCREEN --- */
+        #intro-screen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: var(--color-bg); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 50; transition: opacity 1.5s ease, visibility 1.5s; 
+        }
+        #intro-screen.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        #intro-screen h2 {
+            font-family: var(--font-title); font-weight: 400; font-size: 2.5rem;
+            margin-bottom: 40px; color: #000; position: relative; z-index: var(--z-ui); 
+        }
+
+        /* --- BACKGROUND ELEMENTS --- */
+        #gaudi-watermark {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 1050px; height: 1050px; 
+            background-image: url('gaudi-bg.jpg'); background-position: center; background-size: contain; background-repeat: no-repeat;
+            opacity: 0.20; filter: grayscale(100%); transition: opacity 1.0s ease;
+            z-index: var(--z-watermark); pointer-events: none;
+        }
+        #noise-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; 
+            z-index: var(--z-noise); opacity: 0.06; 
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* --- UI KOMPONENTY (TLAČIDLÁ) --- */
+        .btn-style {
+            background: transparent; border: 1px solid #000; color: #000; 
+            text-transform: uppercase; cursor: pointer; transition: all 0.3s ease;
+            font-family: var(--font-body); font-weight: 500;
+        }
+        .btn-style:hover { background: var(--color-accent); color: var(--color-white); border-color: var(--color-accent); }
+
+        button#explore-btn { 
+            padding: 15px 50px; font-size: 1.1rem; letter-spacing: 2px;
+            position: relative; z-index: var(--z-ui); 
+        }
+        button#explore-btn:disabled { opacity: 0.5; cursor: wait; border-color: #999; color: #999; background: transparent; }
+
+        .read-more {
+            display: inline-block; padding: 8px 25px; font-size: 0.8rem; font-weight: 600;
+            letter-spacing: 1px; text-decoration: none; margin-top: 5px;
+            position: relative; z-index: var(--z-btn-readmore); 
+        }
+
+        #restart-app-btn {
+            display: block; margin-top: 30px; padding: 12px 40px; 
+            font-size: 1rem; letter-spacing: 2px; width: 100%;
+        }
+
+        /* --- FINÁLNE KRUHOVÉ TLAČIDLO --- */
+        #final-gaudi-btn {
+            position: absolute; top: 45%; left: 50%; 
+            transform: translate(-50%, -50%) scale(0);
+            width: 160px; height: 160px;
+            border-radius: 50%; background-color: var(--color-white);
+            border: 1px solid #000; color: #000;
+            display: flex; justify-content: center; align-items: center;
+            font-family: var(--font-title); font-size: 1.2rem; text-align: center;
+            line-height: 1.2; text-transform: uppercase; letter-spacing: 1px;
+            
+            opacity: 0; visibility: hidden; pointer-events: none; z-index: -1; 
+            
+            cursor: pointer;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #final-gaudi-btn.active { 
+            opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); 
+            pointer-events: auto; z-index: 60; 
+        }
+        #final-gaudi-btn:hover { 
+            background: var(--color-accent); color: var(--color-white); 
+            border-color: var(--color-accent); transform: translate(-50%, -50%) scale(1.1); 
+        }
+
+        /* --- 3D SCÉNA & INFO BOXY --- */
+        canvas { display: block; width: 100%; height: 100%; outline: none; }
+        
+        .info-box { 
+            position: absolute; width: 300px; 
+            opacity: 0; transform: translateY(20px); transition: all 1s ease; 
+            z-index: var(--z-info-box); pointer-events: none; 
+        }
+        .info-box.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+        .info-box img { 
+            width: 100%; aspect-ratio: 1920 / 1606; object-fit: cover; margin-bottom: 10px; 
+            /* ZMENA: Použitie novej, jemnejšej animácie pre obrázky */
+            animation: float-image 6s ease-in-out infinite;
+        }
+        
+        .info-box h3 { 
+            font-family: var(--font-title); font-weight: 400; font-size: 1.6rem; 
+            text-transform: uppercase; border-bottom: 2px solid #000; 
+            padding-bottom: 8px; margin: 0 0 10px 0; letter-spacing: 1px; 
+        }
+        .info-box p { 
+            font-family: var(--font-body); font-size: 1rem; line-height: 1.4; 
+            color: #333; margin: 0 0 10px 0; font-weight: 300; 
+        }
+
+/* Pre šírku obrazovky 1920px (Full HD) a menšie: zmenší na 75% */
+        @media screen and (max-width: 1920px) {
+            body {
+                zoom: 0.73; 
+            }
+        }
+
+        /* Pre šírku obrazovky väčšiu ako 1920px (napr. 2K, 4K): ponechá 100% */
+        @media screen and (min-width: 1921px) {
+            body {
+                zoom: 1; 
+            }
+        }
+
+        #box-1 { top: 12%; left: 8%; }
+        #box-2 { bottom: 12%; left: 8%; }
+        #box-3 { top: 12%; right: 8%; text-align: right; }
+        #box-4 { bottom: 12%; right: 8%; text-align: right; }
+        #box-5 { 
+            bottom: 5%; left: 50%; width: 650px; 
+            display: flex; flex-direction: row; align-items: flex-start; gap: 30px; 
+            transform: translateX(-50%) translateY(20px); text-align: left; 
+        }
+        #box-5.visible { transform: translateX(-50%) translateY(0); }
+        #box-5 img { width: 240px; margin-bottom: 0; flex-shrink: 0; }
+        #box-5 .text-content { flex-grow: 1; }
+
+        .shape-1 { clip-path: polygon(5% 0%, 100% 5%, 95% 100%, 0% 95%); }
+        .shape-2 { clip-path: polygon(0% 10%, 100% 0%, 90% 100%, 5% 90%); animation-delay: -1s; }
+        .shape-3 { clip-path: polygon(10% 0%, 95% 10%, 100% 95%, 0% 100%); animation-delay: -2s; }
+        .shape-4 { clip-path: polygon(0% 0%, 100% 10%, 90% 100%, 10% 90%); animation-delay: -3s; }
+        .shape-5 { clip-path: polygon(5% 5%, 95% 0%, 100% 95%, 0% 100%); animation-delay: -4s; }
+
+        /* --- ČREPINY (SHARDS) --- */
+        .shard { 
+            position: absolute; z-index: var(--z-shards); 
+            /* Pôvodná VÝRAZNÁ animácia pre úvodné črepiny */
+            animation: float 8s ease-in-out infinite; 
+            transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1); 
+        }
+        #intro-screen.fade-out .shard { 
+            top: 50% !important; left: 50% !important; 
+            transform: translate(-50%, -50%) scale(0.1) rotate(360deg) !important; opacity: 0; 
+        }
+        
+        .shard-1 { width: 160px; height: 160px; background: var(--color-accent); opacity: 0.9; clip-path: polygon(10% 0%, 100% 0%, 80% 100%, 0% 80%); top: -20px; left: -20px; animation-duration: 9s; }
+        .shard-2 { width: 70px; height: 70px; background: #ff7b00; opacity: 0.85; clip-path: polygon(50% 0%, 100% 60%, 40% 100%, 0% 40%); top: 12%; left: 10%; animation-delay: -2s; animation-duration: 7s; }
+        .shard-3 { width: 90px; height: 90px; background: #00c2ff; opacity: 0.7; clip-path: polygon(20% 0%, 100% 20%, 80% 100%, 0% 70%); top: 5%; left: 18%; animation-delay: -1s; animation-duration: 10s; }
+        .shard-4 { width: 130px; height: 130px; background: #ff7b00; opacity: 0.85; clip-path: polygon(0% 20%, 80% 0%, 100% 80%, 20% 100%); top: -10px; left: 95%; animation-delay: -4s; }
+        .shard-5 { width: 60px; height: 60px; background: var(--color-accent); opacity: 0.8; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); top: 15%; left: 88%; animation-delay: -3s; animation-duration: 6s; }
+        .shard-6 { width: 80px; height: 80px; background: #0055ff; opacity: 0.8; clip-path: polygon(10% 10%, 90% 20%, 70% 90%, 20% 80%); top: 5%; left: 80%; animation-delay: -5s; }
+        .shard-7 { width: 150px; height: 150px; background: #00c2ff; opacity: 0.8; clip-path: polygon(0% 0%, 70% 10%, 100% 80%, 20% 100%); top: 95%; left: -10px; animation-delay: -1.5s; animation-duration: 8.5s; }
+        .shard-8 { width: 50px; height: 50px; background: var(--color-accent); opacity: 0.9; clip-path: polygon(30% 0%, 100% 30%, 70% 100%, 0% 70%); top: 85%; left: 12%; animation-delay: -3.5s; animation-duration: 7.5s; }
+        .shard-9 { width: 85px; height: 85px; background: #ff7b00; opacity: 0.8; clip-path: polygon(10% 20%, 90% 0%, 80% 90%, 0% 60%); top: 92%; left: 18%; animation-delay: -2.5s; animation-duration: 9.5s; }
+        .shard-10 { width: 140px; height: 140px; background: #0055ff; opacity: 0.85; clip-path: polygon(50% 0%, 100% 50%, 20% 100%, 0% 30%); top: 95%; left: 95%; animation-delay: -4.5s; animation-duration: 7s; }
+        .shard-11 { width: 60px; height: 60px; background: #00c2ff; opacity: 0.7; clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 80%); top: 82%; left: 90%; animation-delay: -1s; }
+        .shard-12 { width: 90px; height: 90px; background: var(--color-accent); opacity: 0.85; clip-path: polygon(0% 20%, 100% 0%, 80% 80%, 20% 100%); top: 95%; left: 80%; animation-delay: -3s; }
+
+        /* --- VÝRAZNÁ ANIMÁCIA (PRE ÚVODNÉ ČREPINY) --- */
+        @keyframes float { 
+            0% { transform: translateY(0px) rotate(0deg) scale(1); } 
+            50% { transform: translateY(-25px) rotate(4deg) scale(1.06); } 
+            100% { transform: translateY(0px) rotate(0deg) scale(1); } 
+        }
+
+        /* --- NOVÁ JEMNEJŠIA ANIMÁCIA (PRE OBRÁZKY) --- */
+        /* Hodnoty sú "zlatý stred" medzi pôvodnými a výraznými */
+        @keyframes float-image { 
+            0% { transform: translateY(0px) rotate(0deg) scale(1); } 
+            50% { transform: translateY(-16px) rotate(2.5deg) scale(1.035); } 
+            100% { transform: translateY(0px) rotate(0deg) scale(1); } 
+        }
+
+        /* --- MODAL SYSTEM --- */
+        #modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.92); 
+            z-index: var(--z-backdrop); opacity: 0; transition: opacity var(--transition-speed); pointer-events: none;
+        }
+        #modal-backdrop.active { opacity: 1; pointer-events: auto; }
+
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent; z-index: var(--z-modal); 
+            display: flex; justify-content: center; align-items: flex-end; 
+            opacity: 0; visibility: hidden; transition: all var(--transition-speed) ease; pointer-events: none;
+        }
+        #modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+        
+        #modal-overlay.centered-modal { align-items: center; }
+        #modal-overlay.centered-modal #modal-content { margin-bottom: 0; margin-top: 0; }
+
+        #modal-content {
+            background: var(--color-white); width: 500px; max-width: 90%; padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15); position: relative;
+            transform: translateY(30px); transition: transform var(--transition-speed) ease;
+            border: 1px solid #eee; margin-bottom: 12vh; 
+        }
+        #modal-overlay.active #modal-content { transform: translateY(0); }
+
+        #close-modal { 
+            position: absolute; top: 15px; right: 20px; font-size: 2rem; cursor: pointer; color: #999; 
+            transition: color 0.3s; 
+        }
+        #close-modal:hover { color: #000; }
+        #modal-title { font-family: var(--font-title); font-size: 2rem; margin-top: 0; margin-bottom: 20px; text-transform: uppercase;}
+        #modal-text { font-family: var(--font-body); font-size: 1.1rem; line-height: 1.7; font-weight: 300; text-align: justify; }
+
+        /* --- ZVÄČŠENÝ OBRÁZOK (ZOOM) --- */
+        .zoomed-bg-image {
+            position: fixed; z-index: var(--z-zoomed-img); 
+            transition: all var(--zoom-speed) cubic-bezier(0.25, 1, 0.5, 1);
+            pointer-events: none; transform-origin: center center;
+        }
+        .zoomed-bg-image.active {
+            top: 12% !important; left: 50% !important; 
+            width: 50vh !important; height: auto !important;
+            transform: translate(-50%, 0) !important;
+            filter: drop-shadow(0 20px 50px rgba(0,0,0,0.3)); 
+        }
+
+        #logo-cover { position: absolute; bottom: 0; right: 0; width: 160px; height: 60px; background-color: var(--color-white); z-index: 20; pointer-events: none; }
+        a[href*="spline.design"], #spline-watermark { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+    </style>
+</head>
+<body>
+
+    <header><h1>- Antoni Gaudí -</h1></header>
+
+    <div id="intro-screen">
+        <div id="gaudi-watermark"></div>
+        <div id="noise-overlay"></div>
+        <div class="shard shard-1"></div><div class="shard shard-2"></div><div class="shard shard-3"></div>
+        <div class="shard shard-4"></div><div class="shard shard-5"></div><div class="shard shard-6"></div>
+        <div class="shard shard-7"></div><div class="shard shard-8"></div><div class="shard shard-9"></div>
+        <div class="shard shard-10"></div><div class="shard shard-11"></div><div class="shard shard-12"></div>
+        <h2>- 100. výročie úmrtia -</h2>
+        <button id="explore-btn" class="btn-style" disabled>Načítavam...</button>
+    </div>
+
+    <div id="modal-backdrop"></div>
+    <div id="final-gaudi-btn">Antoni<br>Gaudí</div>
+
+    <div id="modal-overlay">
+        <div id="modal-content">
+            <span id="close-modal">&times;</span>
+            <h2 id="modal-title">Názov</h2>
+            <div id="modal-text">Text...</div>
+        </div>
+    </div>
+
+    <div id="logo-cover"></div>
+    <canvas id="canvas3d"></canvas>
+
+    <div id="box-1" class="info-box">
+        <img src="sagrada-familia.jpg" alt="Sagrada" class="shape-1">
+        <h3>Sagrada Família</h3>
+        <p>Gaudího celoživotné dielo. Chrám, ktorý rastie organicky ako les...</p>
+        <button class="read-more btn-style" data-title="Sagrada Família" data-text="<b>Výstavba:</b> 1882 – súčasnosť<br><br>Jeho nedokončená symfónia z kameňa. Interiér je navrhnutý ako spirituálny les, kde stĺpy sa vetvia ako stromy a svetlo prenikajúce cez vitráže mení farbu počas dňa. Gaudí vedel, že stavbu nedokončí, a preto ju navrhol tak, aby ju mohli dostavať generácie po ňom.">Zobraziť viac</button>
+    </div>
+
+    <div id="box-2" class="info-box">
+        <img src="casa-batllo.jpg" alt="Batllo" class="shape-2">
+        <h3>Casa Batlló</h3>
+        <p>Legenda o svätom Jurajovi. Strecha pripomína chrbát draka...</p>
+        <button class="read-more btn-style" data-title="Casa Batlló" data-text="<b>Výstavba:</b> 1904 – 1906<br><br>Legenda o svätom Jurajovi v architektonickej podobe. Strecha pripomína chrbát draka s lesklými šupinami, zatiaľ čo balkóny vyzerajú ako lebky obetí. Fasáda pokrytá keramikou mení farbu ako hladina mora, čím dom ožíva pri každom lúči slnka.">Zobraziť viac</button>
+    </div>
+
+    <div id="box-3" class="info-box">
+        <img src="park-guell.jpg" alt="Park" class="shape-3">
+        <h3>Park Güell</h3>
+        <p>Utopické záhradné mesto, kde architektúra splýva s prírodou...</p>
+        <button class="read-more btn-style" data-title="Park Güell" data-text="<b>Výstavba:</b> 1900 – 1914<br><br>Utopické záhradné mesto, kde architektúra neruší prírodu, ale splýva s ňou. Slávna hadia lavička je pokrytá technikou trencadís – mozaikou z rozbitých dlaždíc, ktoré robotníci zbierali po celej Barcelone. Je to miesto s najlepším výhľadom na mesto.">Zobraziť viac</button>
+    </div>
+
+    <div id="box-4" class="info-box">
+        <img src="casa-mila.jpg" alt="Mila" class="shape-4">
+        <h3>Casa Milà</h3>
+        <p>Známa ako La Pedrera. Budova bez jedinej nosnej steny...</p>
+        <button class="read-more btn-style" data-title="Casa Milà" data-text="<b>Výstavba:</b> 1906 – 1912<br><br>Známa ako 'La Pedrera' (Kameňolom). Je to budova bez jedinej nosnej steny, všetko držia stĺpy a oceľ. Jej zvlnená fasáda evokuje morské vlny a strešné komíny pripomínajú strážcov, ktorí hľadia na Barcelonu ako mlčanliví bojovníci.">Zobraziť viac</button>
+    </div>
+
+    <div id="box-5" class="info-box">
+        <img src="palau-guell.jpg" alt="Palau" class="shape-5">
+        <div class="text-content">
+            <h3>Palau Güell</h3>
+            <p>Jeden z prvých veľkých projektov, kde Gaudí experimentoval...</p>
+            <button class="read-more btn-style" data-title="Palau Güell" data-id="palau-guell-trigger" data-text="<b>Výstavba:</b> 1886 – 1890<br><br>Jeden z prvých veľkých projektov, kde Gaudí experimentoval s priestorom a svetlom. Hoci zvonku pôsobí stroho a pevnostne, interiér skrýva parabolickú kupolu s malými otvormi, ktoré simulujú nočnú hviezdnu oblohu. Je to majstrovské dielo kontrastu medzi temnotou a svetlom.">Zobraziť viac</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Application } from 'https://unpkg.com/@splinetool/runtime';
+
+        // --- KONŠTANTY A ELEMENTY ---
+        const elements = {
+            canvas: document.getElementById('canvas3d'),
+            exploreBtn: document.getElementById('explore-btn'),
+            introScreen: document.getElementById('intro-screen'),
+            modal: {
+                overlay: document.getElementById('modal-overlay'),
+                backdrop: document.getElementById('modal-backdrop'),
+                title: document.getElementById('modal-title'),
+                text: document.getElementById('modal-text'),
+                closeBtn: document.getElementById('close-modal')
+            },
+            finalBtn: document.getElementById('final-gaudi-btn'),
+            readMoreBtns: document.querySelectorAll('.read-more')
+        };
+
+        const state = {
+            clickCounter: 1,
+            totalSteps: 5,
+            isPalauGuellOpen: false
+        };
+
+        // --- SPLINE INIT ---
+        const app = new Application(elements.canvas);
+        app.load('https://prod.spline.design/pC5ZzH4FmfIq343A/scene.splinecode')
+            .then(() => {
+                elements.exploreBtn.innerText = "Preskúmať";
+                elements.exploreBtn.disabled = false;
+            })
+            .catch(err => console.log("Chyba načítania:", err));
+
+        // --- EVENT LISTENERS ---
+        
+        // 1. Intro
+        elements.exploreBtn.addEventListener('click', () => {
+            elements.introScreen.classList.add('fade-out');
+        });
+
+        // 2. 3D Kliknutia
+        app.addEventListener('mouseDown', (e) => {
+            const objectName = e.target.name; 
+            if (objectName && objectName.includes('Gaudi_')) {
+                if (state.clickCounter <= state.totalSteps) {
+                    const boxElement = document.getElementById('box-' + state.clickCounter);
+                    if (boxElement) {
+                        setTimeout(() => boxElement.classList.add('visible'), 500);
+                    }
+                    state.clickCounter++;
+                }
+            }
+        });
+
+        // 3. Tlačidlá "Zobraziť viac"
+        elements.readMoreBtns.forEach(btn => {
+            btn.addEventListener('click', (event) => handleReadMoreClick(event, btn));
+        });
+
+        // 4. Zatváranie Modalu
+        elements.modal.closeBtn.addEventListener('click', closeModal);
+        elements.modal.overlay.addEventListener('click', (e) => {
+            if (e.target === elements.modal.overlay) closeModal();
+        });
+        elements.modal.backdrop.addEventListener('click', closeModal);
+
+        // 5. Finálne tlačidlo
+        elements.finalBtn.addEventListener('click', showFinalModal);
+
+        // 6. Reštart (dynamický event)
+        document.addEventListener('click', (e) => {
+            if(e.target && e.target.id === 'restart-app-btn') handleRestart();
+        });
+
+        // --- FUNKCIE ---
+
+        function handleReadMoreClick(event, btn) {
+            event.stopPropagation();
+            const title = btn.getAttribute('data-title');
+            const text = btn.getAttribute('data-text');
+            
+            // Check pre finále
+            if (title.includes("Palau")) state.isPalauGuellOpen = true;
+
+            // Zoom logika
+            createZoomImage(btn);
+
+            // Otvorenie okna
+            elements.modal.title.innerText = title;
+            elements.modal.text.innerHTML = text; 
+            elements.modal.overlay.classList.add('active');
+            elements.modal.backdrop.classList.add('active');
+        }
+
+        function createZoomImage(btnSource) {
+            const infoBox = btnSource.closest('.info-box');
+            const originalImg = infoBox.querySelector('img');
+            const rect = originalImg.getBoundingClientRect();
+            
+            const clonedImg = document.createElement('img');
+            clonedImg.src = originalImg.src;
+            // Extrahovanie shape class
+            const shapeClass = Array.from(originalImg.classList).find(c => c.startsWith('shape-'));
+            clonedImg.className = `zoomed-bg-image ${shapeClass}`;
+            
+            // Pozícia štart
+            clonedImg.style.top = rect.top + 'px';
+            clonedImg.style.left = rect.left + 'px';
+            clonedImg.style.width = rect.width + 'px';
+            
+            document.body.appendChild(clonedImg);
+
+            // Animácia
+            requestAnimationFrame(() => clonedImg.classList.add('active'));
+        }
+
+        function closeModal() {
+            elements.modal.overlay.classList.remove('active');
+            elements.modal.overlay.classList.remove('centered-modal'); // Reset pozície
+            elements.modal.backdrop.classList.remove('active');
+            
+            // Odstránenie zoom obrázka
+            const zoomedImg = document.querySelector('.zoomed-bg-image');
+            if (zoomedImg) {
+                zoomedImg.style.opacity = '0';
+                setTimeout(() => {
+                    if(zoomedImg.parentNode) zoomedImg.parentNode.removeChild(zoomedImg);
+                }, 500);
+            }
+            checkFinalTrigger();
+        }
+
+        function checkFinalTrigger() {
+            if (state.isPalauGuellOpen) {
+                setTimeout(() => {
+                    elements.finalBtn.classList.add('active');
+                }, 500);
+                state.isPalauGuellOpen = false; 
+            }
+        }
+
+        function showFinalModal() {
+            elements.modal.title.innerText = "Antoni Gaudí";
+            elements.modal.text.innerHTML = `
+                <b>(1852 – 1926)</b><br><br>
+                Katalánsky architekt a najväčší predstaviteľ modernizmu. Jeho diela sú známe prepojením prírodných tvarov, náboženskej symboliky a inovatívnych technických riešení. 
+                <br><br>
+                Väčšinu života zasvätil stavbe chrámu Sagrada Família, pričom posledné roky žil priamo na stavenisku ako pustovník. Zomrel tragicky po zrážke s električkou, no jeho dielo žije ďalej.
+                <br>
+                <button id="restart-app-btn" class="btn-style">ZAČAŤ ZNOVA</button>
+            `;
+            
+            elements.modal.overlay.classList.add('active', 'centered-modal');
+            elements.modal.backdrop.classList.add('active');
+        }
+
+        function handleRestart() {
+            elements.modal.overlay.classList.remove('active', 'centered-modal');
+            elements.modal.backdrop.classList.remove('active');
+            elements.finalBtn.classList.remove('active');
+            elements.introScreen.classList.remove('fade-out');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
